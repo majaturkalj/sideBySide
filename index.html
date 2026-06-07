@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SideBySideComparison</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="L.Map.Sync.js"></script>
+  <script src="https://unpkg.com/georaster"></script>
+  <script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+</head>
+
+<body>
+  <div class="row">
+    <div class="cols" id='map1'></div>
+    <div class="cols" id="map2"></div>
+  </div>
+
+</body>
+
+<script>
+//creating a map object
+var map1 = L.map('map1').setView([10.23, 7.78], 6);
+var map2 = L.map('map2').setView([10.23, 7.78], 6);
+
+//adding stadia basemap
+var Stadia_AlidadeSmoothDark = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.{ext}', {
+	minZoom: 0,
+	maxZoom: 20,
+	attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	ext: 'png'
+});
+
+Stadia_AlidadeSmoothDark.addTo(map1);
+
+//adding a CartoDB basemap
+  var CartoDB_DarkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
+  });
+
+  CartoDB_DarkMatter.addTo(map2);
+
+// Load the precipitation GeoTIFF file
+    fetch("precipitation.tif")
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => {
+            parseGeoraster(arrayBuffer).then(georaster => {
+
+                var precipitation = new GeoRasterLayer({
+                    georaster: georaster,
+                    opacity: 0.9,
+                    resolution: 256
+                });
+
+                precipitation.addTo(map1);
+            });
+        });
+
+// Load the temperature GeoTIFF file
+    fetch("temperature.tif")
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => {
+            parseGeoraster(arrayBuffer).then(georaster => {
+
+                var temperature = new GeoRasterLayer({
+                    georaster: georaster,
+                    opacity: 0.9,
+                    resolution: 256
+                });
+
+                temperature.addTo(map2);
+            });
+        });
+
+//syncing the maps
+  map1.sync(map2);
+  map2.sync(map1);
+
+
+//adding a scalebar
+  var scale1 = L.control.scale({position: "bottomleft"});
+    scale1.addTo(map1);
+
+  var scale2 = L.control.scale({position: "bottomleft"});
+    scale2.addTo(map2);
+
+//descrition box
+  var description = L.control({position: "topright"});
+    description.onAdd = function() {
+  var div = L.DomUtil.create("div", "description");
+    div.innerHTML = 
+        'Created with the Leaflet library<br>' +
+        '<img src="leaflet.png">';
+    return div;
+    };
+
+  description.addTo(map2);
+
+  // Create temperature legend control
+  let temperatureLegend = L.control({ position: "bottomright" });
+
+  temperatureLegend.onAdd = function(map) {
+    let div = L.DomUtil.create("div", "temperature-legend");
+
+    div.innerHTML = 
+      '<h4>Temperature</h4>' +
+      '<div class="gradient-bar-temperature"></div>' +
+      '<div class="legend-labels-temperature">' +
+        '<span>Lower</span>' +
+        '<span>Higher</span>' +
+      '</div>';
+
+    return div;
+  };
+
+  // Add temperature legend to the map
+  temperatureLegend.addTo(map2);
+
+  // Create precipitation legend control
+  let precipitationLegend = L.control({ position: "bottomright" });
+
+  precipitationLegend.onAdd = function(map) {
+    let div = L.DomUtil.create("div", "precipitation-legend");
+
+    div.innerHTML = 
+      '<h4>Precipitation</h4>' +
+      '<div class="gradient-bar-precipitation"></div>' +
+      '<div class="legend-labels-precipitation">' +
+        '<span>Lower</span>' +
+        '<span>Higher</span>' +
+      '</div>';
+
+    return div;
+  };
+
+  // Add precipitation legend to the map
+  precipitationLegend.addTo(map1);
+
+</script>
+</html>
